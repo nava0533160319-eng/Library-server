@@ -1,15 +1,22 @@
 const { users } = require('../db.js');
 
-const signUp = (req, res) => {
+function createError(message, status = 500, type = 'Error') {
+    const error = new Error(message);
+    error.status = status;
+    error.type = type;
+    return error;
+}
+
+const signUp = (req, res, next) => {
     const { username, email, password } = req.body;
 
     if (!username || !email || !password) {
-        return res.status(400).json({ error: 'username, email, and password are required' });
+        return next(createError('username, email, and password are required', 400, 'BadRequest'));
     }
 
     const existingUser = users.find((user) => user.email === email || user.username === username);
     if (existingUser) {
-        return res.status(409).json({ error: 'User already exists' });
+        return next(createError('User already exists', 409, 'Conflict'));
     }
 
     const newUser = {
@@ -24,16 +31,16 @@ const signUp = (req, res) => {
     res.status(201).json(newUser);
 };
 
-const signIn = (req, res) => {
+const signIn = (req, res, next) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-        return res.status(400).json({ error: 'email and password are required' });
+        return next(createError('email and password are required', 400, 'BadRequest'));
     }
 
     const user = users.find((item) => item.email === email && item.password === password);
     if (!user) {
-        return res.status(401).json({ error: 'Invalid email or password' });
+        return next(createError('Invalid email or password', 401, 'Unauthorized'));
     }
 
     res.json({ message: 'Login successful', user });

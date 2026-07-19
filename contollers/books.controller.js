@@ -1,10 +1,17 @@
-import books from '../db.js';
+const books = require('../db.js');
 
-export const getAllBooks = (req, res) => {
+function createError(message, status = 500, type = 'Error') {
+    const error = new Error(message);
+    error.status = status;
+    error.type = type;
+    return error;
+}
+
+const getAllBooks = (req, res) => {
     res.json({ message: 'Hello! Your API is working!' });
 };
 
-export const getBooksWithinRange =  (req, res) => {
+const getBooksWithinRange =  (req, res) => {
     const page = req.query.page === undefined
         ? 1
         : Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -34,44 +41,44 @@ export const getBooksWithinRange =  (req, res) => {
     });
 };
 
-export const getBookByCode =  (req, res) => {
+const getBookByCode =  (req, res, next) => {
     const { code } = req.params;
     const book = books.find((item) => item.code === code);
 
     if (!book) {
-        return res.status(404).json({ error: `Book with code ${code} not found` });
+        return next(createError(`Book with code ${code} not found`, 404, 'NotFound'));
     }
 
     res.json(book);
 };
 
-export const addBook =  (req, res) => {
+const addBook =  (req, res, next) => {
     const book = req.body;
 
     if (!book || !book.code || !book.name) {
-        return res.status(400).json({ error: 'Book object must include at least code and name' });
+        return next(createError('Book object must include at least code and name', 400, 'BadRequest'));
     }
 
     const existingBook = books.find((item) => item.code === book.code);
     if (existingBook) {
-        return res.status(409).json({ error: `Book with code ${book.code} already exists` });
+        return next(createError(`Book with code ${book.code} already exists`, 409, 'Conflict'));
     }
 
     books.push(book);
     res.status(201).json(book);
 };
 
-export const updateBook =  (req, res) => {
+const updateBook =  (req, res, next) => {
     const { code } = req.params;
     const updates = req.body;
 
     if (!updates || Object.keys(updates).length === 0) {
-        return res.status(400).json({ error: 'Update details are required' });
+        return next(createError('Update details are required', 400, 'BadRequest'));
     }
 
     const bookIndex = books.findIndex((item) => item.code === code);
     if (bookIndex === -1) {
-        return res.status(404).json({ error: `Book with code ${code} not found` });
+        return next(createError(`Book with code ${code} not found`, 404, 'NotFound'));
     }
 
     const book = books[bookIndex];
@@ -87,17 +94,17 @@ export const updateBook =  (req, res) => {
     res.json(updatedBook);
 };
 
-export const lendBook = (req, res) => {
+const lendBook = (req, res, next) => {
     const { code } = req.params;
     const { customerCode } = req.body;
 
     if (!customerCode) {
-        return res.status(400).json({ error: 'customerCode is required' });
+        return next(createError('customerCode is required', 400, 'BadRequest'));
     }
 
     const book = books.find((item) => item.code === code);
     if (!book) {
-        return res.status(404).json({ error: `Book with code ${code} not found` });
+        return next(createError(`Book with code ${code} not found`, 404, 'NotFound'));
     }
 
     const lending = {
@@ -110,26 +117,37 @@ export const lendBook = (req, res) => {
     res.status(201).json({ message: 'Lending added', lending });
 };
 
-export const returnLending =  (req, res) => {
+const returnLending =  (req, res, next) => {
     const { code } = req.params;
     const book = books.find((item) => item.code === code);
 
     if (!book) {
-        return res.status(404).json({ error: `Book with code ${code} not found` });
+        return next(createError(`Book with code ${code} not found`, 404, 'NotFound'));
     }
 
     book.borrowed = false;
     res.json({ message: 'Book returned', book });
 };
 
-export const deleteBook =  (req, res) => {
+const deleteBook =  (req, res, next) => {
     const { code } = req.params;
     const bookIndex = books.findIndex((item) => item.code === code);
 
     if (bookIndex === -1) {
-        return res.status(404).json({ error: `Book with code ${code} not found` });
+        return next(createError(`Book with code ${code} not found`, 404, 'NotFound'));
     }
 
     const deletedBook = books.splice(bookIndex, 1)[0];
     res.json({ message: 'Book deleted', book: deletedBook });
+};
+
+module.exports = {
+    getAllBooks,
+    getBooksWithinRange,
+    getBookByCode,
+    addBook,
+    updateBook,
+    lendBook,
+    returnLending,
+    deleteBook
 };
