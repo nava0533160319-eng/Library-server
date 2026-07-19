@@ -7,8 +7,13 @@ function createError(message, status = 500, type = 'Error') {
     return error;
 }
 
-const getAllBooks = (req, res) => {
-    res.json({ message: 'Hello! Your API is working!' });
+export const getAllBooks = async (req, res, next) => {
+    const result = await Books.find();
+    try {
+        res.json(result);
+    } catch (err) {
+        next({ status: 500, error: err, type: 'server error' });
+    }
 };
 
 const getBooksWithinRange =  (req, res) => {
